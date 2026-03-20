@@ -1,0 +1,73 @@
+# Build directories
+/build/
+
+/.cache/
+
+# CMake artifacts
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Common build outputs
+*.o
+*.obj
+*.so
+*.a
+*.lib
+*.dll
+*.exe
+*.out
+*.app
+*.dSYM/
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+*.tmp
+*~
+*.swp
+*.swo
+*.bak
+
+# Python caches (some helper scripts in repo)
+__pycache__/
+*.py[cod]
+
+# Coverage / profiling
+coverage/
+*.gcno
+*.gcda
+
+# Project-specific generated outputs
+YOUR_OUTPUTPATH/
+*.aux
+*.pl
+*.nodes
+*.nets
+*.scl
+*.wts
+
+# Environment/env files
+.env
+
+# Ignore compiled binaries in build subfolders
+build/**/bin/
+build/**/lib/
+
+# Exceptions: keep source and important top-level files tracked
+!CMakeLists.txt
+!README.md
+!LICENSE
+
+# Local run outputs
+/adaptec1/

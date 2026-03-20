@@ -90,31 +90,6 @@ bool EplaceNesterovOpt<T>::stop_condition()
         exit(0);
     }
 
-    // if (placer->placementStage == mGP)
-    // {
-    //     bool judge = (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
-    //     if (judge)
-    //     {
-    //         placer->mGPIterationCount = iter_count;
-    //     }
-    //     // return (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
-    //     return judge;
-    // }
-    // else if (placer->placementStage == FILLERONLY)
-    // {
-    //     return iter_count >= 20;
-    // }
-    // else if (placer->placementStage == cGP)
-    // {
-    //     return (placer->globalDensityOverflow < cGPtargetOverflow) || (iter_count > MAX_ITERATION);
-    // }
-    // else
-    // {
-    //     cerr << "INCORRECT PLACEMENT STAGE!\n";
-    //     exit(0);
-    // }
-
-    // return (placer->globalDensityOverflow < targetOverflow) || (iter_count > MAX_ITERATION);
 }
 
 template <typename T>
@@ -165,10 +140,6 @@ void EplaceNesterovOpt<T>::opt_step()
     iter_count++;
 }
 
-// template <typename T>
-// void EplaceNesterovOpt<T>::reset(){
-//     iter_count = 0;
-// }
 
 template <typename T>
 void EplaceNesterovOpt<T>::init()
@@ -317,7 +288,7 @@ template <>
 void EplaceNesterovOpt<VECTOR_3D>::opt_step_vanilla()
 {
     cur_iter.reference_solution = placer->getPosition();
-    placer->totalGradientUpdate(); //?
+    placer->totalGradientUpdate(); 
     cur_iter.gradient = placer->getGradient();
     float step_size;
     NSIter<VECTOR_3D> new_iter;

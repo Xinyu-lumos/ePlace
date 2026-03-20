@@ -1,0 +1,1 @@
+./ePlace -aux ./adaptec4.aux -targetDensity 1.0  -fullPlot -targetOverflow 0.1 -legalizerPath 

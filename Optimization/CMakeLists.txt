@@ -1,7 +1,6 @@
 ADD_EXECUTABLE(
     ePlace
     ePlace_test.cpp
-    # optimizer.cpp
     ${PROJECT_SOURCE_DIR}/Parser/parser.cpp
     ${PROJECT_SOURCE_DIR}/PlaceCommon/arghandler.cpp
     ${PROJECT_SOURCE_DIR}/PlaceCommon/objects.cpp

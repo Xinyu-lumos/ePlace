@@ -1,4 +1,5 @@
 PROJECT (ePlace)
+SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 #SET(CMAKE_C_FLAGS "-O3 -w  -funroll-loops -ffast-math -funit-at-a-time -fPIC")
 # SET(CMAKE_C_FLAGS "-m64 -lX11 -O2 -fPIC -DNDEBUG -ffast-math -Dcimg_display=1 ")
 SET(CMAKE_CXX_FLAGS "-w -m64 -O3 -fpermissive -std=c++1y -fPIC -fopenmp -funroll-loops -ffast-math -Dcimg_display=1")

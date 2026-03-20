@@ -2,7 +2,6 @@
 #include "arghandler.h"
 #include "qplace.h"
 #include "eplace.h"
-// #include "optimizer.h"
 #include "legalizer.h"
 #include "plot.h"
 #include <iostream>
