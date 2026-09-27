@@ -6,19 +6,27 @@ Reimplementation of Abacus is applied for internal std cell legalization.
 Independent set matching, local reordering and global swap are applied for internal detailed placement.
 
 # How to Build
-To build, go to the root directory.
+Requires CMake 3.16+ and a C++17 compiler. macOS Apple Clang and Linux GCC are supported. OpenMP is enabled when available; otherwise the program runs without OpenMP. Placement images are saved as BMP files without requiring X11.
+
+From the repository root:
+```sh
+cmake -S . -B build
+cmake --build build --target ePlace -j 8
 ```
-mkdir build
-cd build 
-cmake .. 
-cd main
-make
-```
+
 # How to Run
-sample command:
+Run the included synthetic example (100 standard cells, 4 fixed pins and 184 nets):
+```sh
+./build/main/ePlace -aux ./examples/smoke/smoke.aux -targetDensity 0.8 -targetOverflow 0.1 -internalLegal 1 -internalDP -outputPath ./output
 ```
-./ePlace -aux ./adaptec4.aux -targetDensity 1.0  -fullPlot -targetOverflow 0.1 -legalizerPath YOUR_LEGALIZERPATH -outputPath YOUR_OUTPUTPATH
+This runs quadratic placement, global placement, internal Abacus legalization and detailed placement. Results are saved under `output/smoke/`, including `smoke-eDP.pl` and `Graphs/Detailed placement result.bmp`. This example verifies the standard-cell flow; it is not a benchmark of large mixed-size designs.
+
+For an existing Bookshelf benchmark, keep its `.nodes`, `.nets`, `.wts`, `.pl` and `.scl` files alongside the `.aux` file, then run:
+```sh
+./build/main/ePlace -aux /path/to/adaptec4.aux -targetDensity 1.0 -fullPlot -targetOverflow 0.1 -legalizerPath /path/to/legalizer -outputPath ./output
 ```
+The external legalizer directory must contain a compatible `ntuplace3` executable. For standard-cell designs, `-internalLegal 1 -internalDP` uses the internal implementation instead. The program recreates the output subdirectory named after the benchmark on each run.
+
 # Options
 * -aux: specify input aux file
 * -targetDensity: specify target density

@@ -12,3 +12,4 @@ INCLUDE_DIRECTORIES (
 	${PROJECT_SOURCE_DIR}/PlaceCommon
 	${PROJECT_SOURCE_DIR}/PlaceDB
 )
+target_link_libraries(ParserTest PRIVATE eplace_platform)

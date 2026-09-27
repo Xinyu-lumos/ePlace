@@ -45,7 +45,7 @@ Module *PlaceDB::addNode(int index, string name, float width, float height)
     }
     else if (float_greater(commonRowHeight, height))
     {
-        printf("Cell %s height ERROR: %f\n", name, height);
+        printf("Cell %s height ERROR: %f\n", name.c_str(), height);
         exit(-1);
     }
     dbNodes[index] = node; // memory was previously allocated
@@ -501,7 +501,7 @@ void PlaceDB::removeBlockedSite() // update intervals
                 {
                     //    ---
                     // MMMMMMMMM
-                    curRow->intervals.erase(vector<Interval>::iterator(&(curRow->intervals[i])));
+                    curRow->intervals.erase(curRow->intervals.begin() + i);
                 }
                 else if (tempInterval.end > curObstacle.ur.x && tempInterval.start >= curObstacle.ll.x)
                 {
@@ -520,7 +520,7 @@ void PlaceDB::removeBlockedSite() // update intervals
                     // -----------
                     //    MMMM
                     curRow->intervals[i].end = curObstacle.ll.x;
-                    curRow->intervals.insert(vector<Interval>::iterator(&(curRow->intervals[i + 1])), Interval(curObstacle.ur.x, tempInterval.end));
+                    curRow->intervals.insert(curRow->intervals.begin() + i + 1, Interval(curObstacle.ur.x, tempInterval.end));
                 }
                 else
                 {
@@ -669,7 +669,7 @@ void PlaceDB::showDBInfo()
     {
         for (Module *curNode : dbNodes)
             if (curNode->isMacro)
-                printf(" Macro: %s\n", curNode->name);
+                printf(" Macro: %s\n", curNode->name.c_str());
     }
     printf("               Net #: %d (=%dk)\n", netCount, netCount / 1000);
     printf("               Max net degree=: %d\n", maxNetDegree);

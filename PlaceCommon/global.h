@@ -18,7 +18,9 @@
 #include <iomanip>
 #include "string.h"
 #include "arghandler.h"
-#include "omp.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 using namespace std;
 const string padding(30, '=');
 #define EPS 1.0E-15 // for float number comparison

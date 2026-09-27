@@ -1,0 +1,555 @@
+UCLA nets 1.0
+NumNets : 184
+NumPins : 368
+NetDegree : 2 n0
+c0 B : 0 0
+c1 B : 0 0
+NetDegree : 2 n1
+c0 B : 0 0
+c10 B : 0 0
+NetDegree : 2 n2
+c1 B : 0 0
+c2 B : 0 0
+NetDegree : 2 n3
+c1 B : 0 0
+c11 B : 0 0
+NetDegree : 2 n4
+c2 B : 0 0
+c3 B : 0 0
+NetDegree : 2 n5
+c2 B : 0 0
+c12 B : 0 0
+NetDegree : 2 n6
+c3 B : 0 0
+c4 B : 0 0
+NetDegree : 2 n7
+c3 B : 0 0
+c13 B : 0 0
+NetDegree : 2 n8
+c4 B : 0 0
+c5 B : 0 0
+NetDegree : 2 n9
+c4 B : 0 0
+c14 B : 0 0
+NetDegree : 2 n10
+c5 B : 0 0
+c6 B : 0 0
+NetDegree : 2 n11
+c5 B : 0 0
+c15 B : 0 0
+NetDegree : 2 n12
+c6 B : 0 0
+c7 B : 0 0
+NetDegree : 2 n13
+c6 B : 0 0
+c16 B : 0 0
+NetDegree : 2 n14
+c7 B : 0 0
+c8 B : 0 0
+NetDegree : 2 n15
+c7 B : 0 0
+c17 B : 0 0
+NetDegree : 2 n16
+c8 B : 0 0
+c9 B : 0 0
+NetDegree : 2 n17
+c8 B : 0 0
+c18 B : 0 0
+NetDegree : 2 n18
+c9 B : 0 0
+c19 B : 0 0
+NetDegree : 2 n19
+c10 B : 0 0
+c11 B : 0 0
+NetDegree : 2 n20
+c10 B : 0 0
+c20 B : 0 0
+NetDegree : 2 n21
+c11 B : 0 0
+c12 B : 0 0
+NetDegree : 2 n22
+c11 B : 0 0
+c21 B : 0 0
+NetDegree : 2 n23
+c12 B : 0 0
+c13 B : 0 0
+NetDegree : 2 n24
+c12 B : 0 0
+c22 B : 0 0
+NetDegree : 2 n25
+c13 B : 0 0
+c14 B : 0 0
+NetDegree : 2 n26
+c13 B : 0 0
+c23 B : 0 0
+NetDegree : 2 n27
+c14 B : 0 0
+c15 B : 0 0
+NetDegree : 2 n28
+c14 B : 0 0
+c24 B : 0 0
+NetDegree : 2 n29
+c15 B : 0 0
+c16 B : 0 0
+NetDegree : 2 n30
+c15 B : 0 0
+c25 B : 0 0
+NetDegree : 2 n31
+c16 B : 0 0
+c17 B : 0 0
+NetDegree : 2 n32
+c16 B : 0 0
+c26 B : 0 0
+NetDegree : 2 n33
+c17 B : 0 0
+c18 B : 0 0
+NetDegree : 2 n34
+c17 B : 0 0
+c27 B : 0 0
+NetDegree : 2 n35
+c18 B : 0 0
+c19 B : 0 0
+NetDegree : 2 n36
+c18 B : 0 0
+c28 B : 0 0
+NetDegree : 2 n37
+c19 B : 0 0
+c29 B : 0 0
+NetDegree : 2 n38
+c20 B : 0 0
+c21 B : 0 0
+NetDegree : 2 n39
+c20 B : 0 0
+c30 B : 0 0
+NetDegree : 2 n40
+c21 B : 0 0
+c22 B : 0 0
+NetDegree : 2 n41
+c21 B : 0 0
+c31 B : 0 0
+NetDegree : 2 n42
+c22 B : 0 0
+c23 B : 0 0
+NetDegree : 2 n43
+c22 B : 0 0
+c32 B : 0 0
+NetDegree : 2 n44
+c23 B : 0 0
+c24 B : 0 0
+NetDegree : 2 n45
+c23 B : 0 0
+c33 B : 0 0
+NetDegree : 2 n46
+c24 B : 0 0
+c25 B : 0 0
+NetDegree : 2 n47
+c24 B : 0 0
+c34 B : 0 0
+NetDegree : 2 n48
+c25 B : 0 0
+c26 B : 0 0
+NetDegree : 2 n49
+c25 B : 0 0
+c35 B : 0 0
+NetDegree : 2 n50
+c26 B : 0 0
+c27 B : 0 0
+NetDegree : 2 n51
+c26 B : 0 0
+c36 B : 0 0
+NetDegree : 2 n52
+c27 B : 0 0
+c28 B : 0 0
+NetDegree : 2 n53
+c27 B : 0 0
+c37 B : 0 0
+NetDegree : 2 n54
+c28 B : 0 0
+c29 B : 0 0
+NetDegree : 2 n55
+c28 B : 0 0
+c38 B : 0 0
+NetDegree : 2 n56
+c29 B : 0 0
+c39 B : 0 0
+NetDegree : 2 n57
+c30 B : 0 0
+c31 B : 0 0
+NetDegree : 2 n58
+c30 B : 0 0
+c40 B : 0 0
+NetDegree : 2 n59
+c31 B : 0 0
+c32 B : 0 0
+NetDegree : 2 n60
+c31 B : 0 0
+c41 B : 0 0
+NetDegree : 2 n61
+c32 B : 0 0
+c33 B : 0 0
+NetDegree : 2 n62
+c32 B : 0 0
+c42 B : 0 0
+NetDegree : 2 n63
+c33 B : 0 0
+c34 B : 0 0
+NetDegree : 2 n64
+c33 B : 0 0
+c43 B : 0 0
+NetDegree : 2 n65
+c34 B : 0 0
+c35 B : 0 0
+NetDegree : 2 n66
+c34 B : 0 0
+c44 B : 0 0
+NetDegree : 2 n67
+c35 B : 0 0
+c36 B : 0 0
+NetDegree : 2 n68
+c35 B : 0 0
+c45 B : 0 0
+NetDegree : 2 n69
+c36 B : 0 0
+c37 B : 0 0
+NetDegree : 2 n70
+c36 B : 0 0
+c46 B : 0 0
+NetDegree : 2 n71
+c37 B : 0 0
+c38 B : 0 0
+NetDegree : 2 n72
+c37 B : 0 0
+c47 B : 0 0
+NetDegree : 2 n73
+c38 B : 0 0
+c39 B : 0 0
+NetDegree : 2 n74
+c38 B : 0 0
+c48 B : 0 0
+NetDegree : 2 n75
+c39 B : 0 0
+c49 B : 0 0
+NetDegree : 2 n76
+c40 B : 0 0
+c41 B : 0 0
+NetDegree : 2 n77
+c40 B : 0 0
+c50 B : 0 0
+NetDegree : 2 n78
+c41 B : 0 0
+c42 B : 0 0
+NetDegree : 2 n79
+c41 B : 0 0
+c51 B : 0 0
+NetDegree : 2 n80
+c42 B : 0 0
+c43 B : 0 0
+NetDegree : 2 n81
+c42 B : 0 0
+c52 B : 0 0
+NetDegree : 2 n82
+c43 B : 0 0
+c44 B : 0 0
+NetDegree : 2 n83
+c43 B : 0 0
+c53 B : 0 0
+NetDegree : 2 n84
+c44 B : 0 0
+c45 B : 0 0
+NetDegree : 2 n85
+c44 B : 0 0
+c54 B : 0 0
+NetDegree : 2 n86
+c45 B : 0 0
+c46 B : 0 0
+NetDegree : 2 n87
+c45 B : 0 0
+c55 B : 0 0
+NetDegree : 2 n88
+c46 B : 0 0
+c47 B : 0 0
+NetDegree : 2 n89
+c46 B : 0 0
+c56 B : 0 0
+NetDegree : 2 n90
+c47 B : 0 0
+c48 B : 0 0
+NetDegree : 2 n91
+c47 B : 0 0
+c57 B : 0 0
+NetDegree : 2 n92
+c48 B : 0 0
+c49 B : 0 0
+NetDegree : 2 n93
+c48 B : 0 0
+c58 B : 0 0
+NetDegree : 2 n94
+c49 B : 0 0
+c59 B : 0 0
+NetDegree : 2 n95
+c50 B : 0 0
+c51 B : 0 0
+NetDegree : 2 n96
+c50 B : 0 0
+c60 B : 0 0
+NetDegree : 2 n97
+c51 B : 0 0
+c52 B : 0 0
+NetDegree : 2 n98
+c51 B : 0 0
+c61 B : 0 0
+NetDegree : 2 n99
+c52 B : 0 0
+c53 B : 0 0
+NetDegree : 2 n100
+c52 B : 0 0
+c62 B : 0 0
+NetDegree : 2 n101
+c53 B : 0 0
+c54 B : 0 0
+NetDegree : 2 n102
+c53 B : 0 0
+c63 B : 0 0
+NetDegree : 2 n103
+c54 B : 0 0
+c55 B : 0 0
+NetDegree : 2 n104
+c54 B : 0 0
+c64 B : 0 0
+NetDegree : 2 n105
+c55 B : 0 0
+c56 B : 0 0
+NetDegree : 2 n106
+c55 B : 0 0
+c65 B : 0 0
+NetDegree : 2 n107
+c56 B : 0 0
+c57 B : 0 0
+NetDegree : 2 n108
+c56 B : 0 0
+c66 B : 0 0
+NetDegree : 2 n109
+c57 B : 0 0
+c58 B : 0 0
+NetDegree : 2 n110
+c57 B : 0 0
+c67 B : 0 0
+NetDegree : 2 n111
+c58 B : 0 0
+c59 B : 0 0
+NetDegree : 2 n112
+c58 B : 0 0
+c68 B : 0 0
+NetDegree : 2 n113
+c59 B : 0 0
+c69 B : 0 0
+NetDegree : 2 n114
+c60 B : 0 0
+c61 B : 0 0
+NetDegree : 2 n115
+c60 B : 0 0
+c70 B : 0 0
+NetDegree : 2 n116
+c61 B : 0 0
+c62 B : 0 0
+NetDegree : 2 n117
+c61 B : 0 0
+c71 B : 0 0
+NetDegree : 2 n118
+c62 B : 0 0
+c63 B : 0 0
+NetDegree : 2 n119
+c62 B : 0 0
+c72 B : 0 0
+NetDegree : 2 n120
+c63 B : 0 0
+c64 B : 0 0
+NetDegree : 2 n121
+c63 B : 0 0
+c73 B : 0 0
+NetDegree : 2 n122
+c64 B : 0 0
+c65 B : 0 0
+NetDegree : 2 n123
+c64 B : 0 0
+c74 B : 0 0
+NetDegree : 2 n124
+c65 B : 0 0
+c66 B : 0 0
+NetDegree : 2 n125
+c65 B : 0 0
+c75 B : 0 0
+NetDegree : 2 n126
+c66 B : 0 0
+c67 B : 0 0
+NetDegree : 2 n127
+c66 B : 0 0
+c76 B : 0 0
+NetDegree : 2 n128
+c67 B : 0 0
+c68 B : 0 0
+NetDegree : 2 n129
+c67 B : 0 0
+c77 B : 0 0
+NetDegree : 2 n130
+c68 B : 0 0
+c69 B : 0 0
+NetDegree : 2 n131
+c68 B : 0 0
+c78 B : 0 0
+NetDegree : 2 n132
+c69 B : 0 0
+c79 B : 0 0
+NetDegree : 2 n133
+c70 B : 0 0
+c71 B : 0 0
+NetDegree : 2 n134
+c70 B : 0 0
+c80 B : 0 0
+NetDegree : 2 n135
+c71 B : 0 0
+c72 B : 0 0
+NetDegree : 2 n136
+c71 B : 0 0
+c81 B : 0 0
+NetDegree : 2 n137
+c72 B : 0 0
+c73 B : 0 0
+NetDegree : 2 n138
+c72 B : 0 0
+c82 B : 0 0
+NetDegree : 2 n139
+c73 B : 0 0
+c74 B : 0 0
+NetDegree : 2 n140
+c73 B : 0 0
+c83 B : 0 0
+NetDegree : 2 n141
+c74 B : 0 0
+c75 B : 0 0
+NetDegree : 2 n142
+c74 B : 0 0
+c84 B : 0 0
+NetDegree : 2 n143
+c75 B : 0 0
+c76 B : 0 0
+NetDegree : 2 n144
+c75 B : 0 0
+c85 B : 0 0
+NetDegree : 2 n145
+c76 B : 0 0
+c77 B : 0 0
+NetDegree : 2 n146
+c76 B : 0 0
+c86 B : 0 0
+NetDegree : 2 n147
+c77 B : 0 0
+c78 B : 0 0
+NetDegree : 2 n148
+c77 B : 0 0
+c87 B : 0 0
+NetDegree : 2 n149
+c78 B : 0 0
+c79 B : 0 0
+NetDegree : 2 n150
+c78 B : 0 0
+c88 B : 0 0
+NetDegree : 2 n151
+c79 B : 0 0
+c89 B : 0 0
+NetDegree : 2 n152
+c80 B : 0 0
+c81 B : 0 0
+NetDegree : 2 n153
+c80 B : 0 0
+c90 B : 0 0
+NetDegree : 2 n154
+c81 B : 0 0
+c82 B : 0 0
+NetDegree : 2 n155
+c81 B : 0 0
+c91 B : 0 0
+NetDegree : 2 n156
+c82 B : 0 0
+c83 B : 0 0
+NetDegree : 2 n157
+c82 B : 0 0
+c92 B : 0 0
+NetDegree : 2 n158
+c83 B : 0 0
+c84 B : 0 0
+NetDegree : 2 n159
+c83 B : 0 0
+c93 B : 0 0
+NetDegree : 2 n160
+c84 B : 0 0
+c85 B : 0 0
+NetDegree : 2 n161
+c84 B : 0 0
+c94 B : 0 0
+NetDegree : 2 n162
+c85 B : 0 0
+c86 B : 0 0
+NetDegree : 2 n163
+c85 B : 0 0
+c95 B : 0 0
+NetDegree : 2 n164
+c86 B : 0 0
+c87 B : 0 0
+NetDegree : 2 n165
+c86 B : 0 0
+c96 B : 0 0
+NetDegree : 2 n166
+c87 B : 0 0
+c88 B : 0 0
+NetDegree : 2 n167
+c87 B : 0 0
+c97 B : 0 0
+NetDegree : 2 n168
+c88 B : 0 0
+c89 B : 0 0
+NetDegree : 2 n169
+c88 B : 0 0
+c98 B : 0 0
+NetDegree : 2 n170
+c89 B : 0 0
+c99 B : 0 0
+NetDegree : 2 n171
+c90 B : 0 0
+c91 B : 0 0
+NetDegree : 2 n172
+c91 B : 0 0
+c92 B : 0 0
+NetDegree : 2 n173
+c92 B : 0 0
+c93 B : 0 0
+NetDegree : 2 n174
+c93 B : 0 0
+c94 B : 0 0
+NetDegree : 2 n175
+c94 B : 0 0
+c95 B : 0 0
+NetDegree : 2 n176
+c95 B : 0 0
+c96 B : 0 0
+NetDegree : 2 n177
+c96 B : 0 0
+c97 B : 0 0
+NetDegree : 2 n178
+c97 B : 0 0
+c98 B : 0 0
+NetDegree : 2 n179
+c98 B : 0 0
+c99 B : 0 0
+NetDegree : 2 n180
+t0 B : 0 0
+c0 B : 0 0
+NetDegree : 2 n181
+t1 B : 0 0
+c9 B : 0 0
+NetDegree : 2 n182
+t2 B : 0 0
+c90 B : 0 0
+NetDegree : 2 n183
+t3 B : 0 0
+c99 B : 0 0

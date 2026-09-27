@@ -23,4 +23,4 @@ INCLUDE_DIRECTORIES (
     ${PROJECT_SOURCE_DIR}/FFT
     )
 
-target_link_libraries(ePlaceTest "-lgomp -lpthread -lm -ldl -lX11")
+target_link_libraries(ePlaceTest PRIVATE eplace_platform)

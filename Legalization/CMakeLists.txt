@@ -28,4 +28,4 @@ INCLUDE_DIRECTORIES (
     ${PROJECT_SOURCE_DIR}/Legalization
     )
 
-target_link_libraries(ePlaceAbacus "-lgomp -lpthread -lm -ldl -lX11")
+target_link_libraries(ePlaceAbacus PRIVATE eplace_platform)

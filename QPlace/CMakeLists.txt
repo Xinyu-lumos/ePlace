@@ -17,4 +17,4 @@ INCLUDE_DIRECTORIES (
     ${PROJECT_SOURCE_DIR}/Library/CImg
     )
 
-target_link_libraries(QPPlacerTest "-lgomp -lpthread -lm -ldl -lX11")
+target_link_libraries(QPPlacerTest PRIVATE eplace_platform)
