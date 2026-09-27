@@ -15,6 +15,8 @@ cmake --build build --target ePlace -j 8
 ```
 
 # How to Run
+The main executable writes standard output and error logs to `DUMP.txt` in the current working directory by default. Each run overwrites this file.
+
 Run the included synthetic example (100 standard cells, 4 fixed pins and 184 nets):
 ```sh
 ./build/main/ePlace -aux ./examples/smoke/smoke.aux -targetDensity 0.8 -targetOverflow 0.1 -internalLegal 1 -internalDP -outputPath ./output

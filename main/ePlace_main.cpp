@@ -8,10 +8,24 @@
 #include "detailed.h"
 #include "plot.h"
 #include <iostream>
+#include <cstdio>
+#include <unistd.h>
 using namespace std;
 
 int main(int argc, char *argv[])
 {
+    // Capture both C and C++ logging in the working directory.
+    if (freopen("DUMP.txt", "w", stdout) == nullptr)
+    {
+        perror("Cannot open DUMP.txt");
+        return 1;
+    }
+    if (dup2(fileno(stdout), fileno(stderr)) == -1)
+    {
+        perror("Cannot redirect stderr to DUMP.txt");
+        return 1;
+    }
+
     BookshelfParser parser;
     PlaceDB *placedb = new PlaceDB();
     gArg.Init(argc, argv);
