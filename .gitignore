@@ -1,3 +1,50 @@
 /build/
 /output/
 /DUMP.txt
+
+# Local study notes and examples
+/docs/
+
+# Local caches and Python environments
+.cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Editor and assistant workspace settings
+.vscode/
+.idea/
+.workbuddy/
+*.swp
+*.swo
+*~
+
+# macOS and Windows metadata
+.DS_Store
+._*
+Thumbs.db
+Desktop.ini
+
+# CMake and compiled objects
+/cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+compile_commands.json
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.dSYM/
+
+# Runtime logs
+*.log
