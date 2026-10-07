@@ -1,5 +1,19 @@
 #include <objects.h>
 
+// ============================================================================
+// objects.cpp —— Net / Pin / Module 等原子对象的实现
+//
+// 这里的核心是「线长模型」的三种实现（都在 Net 上）：
+//   · calcNetHPWL      —— 精确半周长线长。遍历所有 pin 求 X/Y/Z 的极值，不可微，只用于评估打印
+//   · calcBoundPin     —— 同样是 HPWL，但顺带把边界 pin 记到 boundPin* 上，供后续复用
+//   · calcWirelength*  —— WA / LSE 两种**平滑可微**的近似线长，梯度下降实际用的就是它们
+//
+// 为什么需要平滑模型：HPWL 是 max/min 函数，在极值切换处不可导，
+// 用带参数 γ 的 log-sum-exp（LSE）或加权平均（WA）来逼近，
+// γ 越小越接近真实 HPWL 但越「陡」，γ 越大越平滑（见 EPlace 里 γ 随溢出率 τ 变化）。
+// 注意：代码里传的都是 invertedGamma = 1/γ。
+// ============================================================================
+
 void Net::addPin(Pin *pin)
 {
     netPins.push_back(pin);
@@ -12,9 +26,12 @@ int Net::getPinCount()
 
 void Net::allocateMemoryForPin(int n)
 {
-    netPins.reserve(n);
+    netPins.reserve(n); //! 预分配，避免 push_back 反复扩容（解析大设计时影响明显）
 }
 
+//! 精确 HPWL = (maxX−minX) + (maxY−minY) + (maxZ−minZ)
+//! 注意：这里直接读 curPin->absolutePos 缓存值（而不是调 getAbsolutePos），
+//! 所以调用前必须保证所有 pin 的绝对坐标已刷新，否则算出来是旧值
 double Net::calcNetHPWL()
 {
     double maxX = -DOUBLE_MAX;
@@ -136,6 +153,11 @@ void Net::clearBoundPins()
     boundPinZmin = NULL;
 }
 
+//! LSE（log-sum-exp）平滑线长：
+//!   WL ≈ (Xmax − Xmin) + (1/α)·ln Σ e^[α(Xi−Xmax)] + (1/α)·ln Σ e^[α(Xmin−Xi)]
+//! 其中 α = invertedGamma = 1/γ。α 越大越贴近 HPWL。
+//! 每个 pin 的 e^[] 值和 sumMax/sumMin 都被缓存下来，梯度函数直接复用，避免重复计算。
+//! expZeroFlg*：指数太小（< NEGATIVE_MAX_EXP）时 e^[] 下溢为 0，打标记让梯度端跳过该项。
 double Net::calcWirelengthLSE_2D(VECTOR_2D invertedGamma)
 {
     VECTOR_2D sumMax;
@@ -218,6 +240,11 @@ double Net::calcWirelengthLSE_2D(VECTOR_2D invertedGamma)
            (pinMaxY - pinMinY + log(sumMax.y) / invertedGamma.y + log(sumMin.y) / invertedGamma.y);
 }
 
+//! WA（weighted-average，加权平均）平滑线长，见 NTUPlace3D 论文第 6 页：
+//!   WL ≈ Σ(Xi·e^[α(Xi−Xmax)]) / Σ(e^[α(Xi−Xmax)])  −  Σ(Xi·e^[α(Xmin−Xi)]) / Σ(e^[α(Xmin−Xi)])
+//! 即「用指数权重做加权平均」来替代 max 和 min，α = invertedGamma = 1/γ。
+//! 相比 LSE 更稳定（分子分母都是有界加权平均），是本工程的默认模型。
+//! 同样依赖 boundPin*，调用前必须先跑过 calcBoundPin()。
 double Net::calcWirelengthWA_2D(VECTOR_2D invertedGamma)
 {
     VECTOR_2D numeratorMax;
@@ -317,6 +344,18 @@ double Net::calcWirelengthWA_2D(VECTOR_2D invertedGamma)
     return (numeratorMax_WA.x / denominatorMax_WA.x - numeratorMin_WA.x / denominatorMin_WA.x) + (numeratorMax_WA.y / denominatorMax_WA.y - numeratorMin_WA.y / denominatorMin_WA.y);
 }
 
+// ----------------------------------------------------------------------------
+// WA 模型对某个 pin 坐标的偏导
+//
+// WA 线长本身是「分式」：   f = numerator / denominator
+// 所以对 Xi 求导要用商法则：∂f/∂Xi = (num'·den − den'·num) / den²
+//   · 对 max 那一支：num' = e^[] + Xi·(α·e^[])，den' = α·e^[]
+//   · 对 min 那一支：指数反向，所以 den' 的符号相反，商法则里变成 + 号
+// 最后梯度 = ∂(max支)/∂Xi − ∂(min支)/∂Xi。
+// 指数下溢（expZeroFlg）的项直接当 0 跳过。
+// 注意：numerator/denominator 用的是 Net 上缓存的 *_WA 成员，
+// 所以必须先调过 calcWirelengthWA_2D 才有正确值。
+// ----------------------------------------------------------------------------
 VECTOR_2D Net::getWirelengthGradientWA_2D(VECTOR_2D invertedGamma, Pin *curPin)
 {
     assert(curPin);
@@ -375,6 +414,12 @@ VECTOR_2D Net::getWirelengthGradientWA_2D(VECTOR_2D invertedGamma, Pin *curPin)
     return gradientOnCurrentPin;
 }
 
+// ----------------------------------------------------------------------------
+// LSE 模型对某个 pin 坐标的偏导（比 WA 简洁得多）
+//   ∂/∂Xi [ (1/α)·ln Σ e^[α(Xi−Xmax)] ] = e^[α(Xi−Xmax)] / Σ e^[α(Xi−Xmax)]
+// 即「自身指数项占总和的比例」，物理含义是 softmax 权重。
+// min 那一支同理，最终梯度 = max支权重 − min支权重。
+// ----------------------------------------------------------------------------
 VECTOR_2D Net::getWirelengthGradientLSE_2D(VECTOR_2D invertedGamma, Pin *curPin)
 {
     VECTOR_2D gradientOnCurrentPin = VECTOR_2D();
@@ -391,6 +436,7 @@ VECTOR_2D Net::getWirelengthGradientLSE_2D(VECTOR_2D invertedGamma, Pin *curPin)
     return gradientOnCurrentPin;
 }
 
+//! 直接返回缓存的绝对坐标（不重算）。调用前需确保 module 移动后已触发 calculateAbsolutePos
 POS_3D Pin::getAbsolutePos()
 {
     // POS_3D absPos;
@@ -403,6 +449,8 @@ POS_3D Pin::getAbsolutePos()
 //     return absolutePos;
 // }
 
+//! 绝对坐标 = 所属 module 的中心 + pin 的 offset。
+//! z 分量直接取 module 的 z（offset 只有 x/y，因为 pin 都在单元表面同一层）
 void Pin::calculateAbsolutePos()
 {
     absolutePos.x = module->getCenter().x + offset.x;
@@ -433,9 +481,10 @@ void Pin::setDirection(int _direction)
 void Module::addPin(Pin *_pin)
 {
     modulePins.push_back(_pin);
-    nets.push_back(_pin->net);
+    nets.push_back(_pin->net); //! nets 是 modulePins 的派生索引，方便按单元遍历线网（如算单元 HPWL）
 }
 
+//! 左下角坐标（2D 投影，丢掉 z）
 POS_2D Module::getLL_2D()
 {
     POS_2D ll_2D;
@@ -444,6 +493,7 @@ POS_2D Module::getLL_2D()
     return ll_2D;
 }
 
+//! 右上角坐标 = 左下角 + 宽高。注意这里假设单元未旋转/翻转（orientation 不影响包围盒）
 POS_2D Module::getUR_2D()
 {
     POS_2D ur_2D;
@@ -464,6 +514,7 @@ void Module::setOrientation(int _oritentation)
 }
 
 //! need to check if coor is out side of the chip!!! but should be done in placeDB
+//! 按「左下角」定位：先存 coor，再反推 center。私有函数，只能由 PlaceDB 调用
 void Module::setLocation_2D(float _x, float _y, float _z)
 {
     coor.x = _x;
@@ -472,9 +523,10 @@ void Module::setLocation_2D(float _x, float _y, float _z)
     // update center
     center.x = coor.x + (float)0.5 * width; //! be careful of float problems
     center.y = coor.y + (float)0.5 * height;
-    center.z = coor.z;
+    center.z = coor.z; //! z 上厚度为 0，中心 z 就等于底部 z
 }
 
+//! 按「中心」定位：先存 center，再反推左下角 coor。ePlace/优化器主要走这条路径
 void Module::setCenter_2D(float _x, float _y, float _z)
 {
     center.x = _x;
@@ -486,11 +538,13 @@ void Module::setCenter_2D(float _x, float _y, float _z)
     coor.z = center.z;
 }
 
+//! 布局行的左下角 = start
 POS_2D SiteRow::getLL_2D()
 {
     return start;
 }
 
+//! 布局行的右上角：end 存的是「右下角」，所以 y 要再加一个行高
 POS_2D SiteRow::getUR_2D()
 {
     POS_2D ur_2D = end;

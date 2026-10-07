@@ -1,5 +1,29 @@
 #include "eplace.h"
 
+// ============================================================================
+// EPlacer_2D —— ePlace 全局布局（非线性静电场类比布局算法）
+//
+// 核心思想：把每个单元（含 filler）看成一团正电荷，用静电场互推来「铺开」单元。
+// 目标函数：    f = WL(x) + λ · D(x)
+//   · WL：线长（LSE 或 WA 平滑模型，用来逼近 HPWL 并可微）
+//   · D ：密度代价 = Σ bin(电荷密度 × 电势)，由泊松方程 ∇²φ = −ρ 解出
+//   · λ ：惩罚因子，迭代中自适应调整
+//
+// 单次迭代的梯度计算链路（totalGradientUpdate 是入口）：
+//   binNodeDensityUpdate()      → 把单元/filler 面积摊到各 bin，得到 nodeDensity/fillerDensity
+//   densityGradientUpdate()     → bin 密度送入 FFT 解泊松方程 → 得到电场 E 和电势 φ
+//                                 再按「单元与 bin 的重叠面积 × E」加权求和得到密度梯度
+//   wirelengthGradientUpdate()  → 先算溢出率 τ，由 τ 反推平滑系数 γ，再求线长梯度
+//   → 合成 totalGradient，交给 Optimization/nesterov.hpp 做 Nesterov 一阶优化更新坐标
+//
+// 三个阶段（PLACEMENT_STAGE）：
+//   mGP        宏观布局：所有单元（含 macro）+ filler 一起动
+//   FILLERONLY 只重撒 filler，用于打破 mGP 后的局部拥塞
+//   cGP        单元布局：macro 冻结，只有 std cell + filler 动
+//
+// 密度由四部分叠加（见 Bin_2D）：nodeDensity + fillerDensity + terminalDensity + baseDensity
+// ============================================================================
+
 void EPlacer_2D::setTargetDensity(float target)
 {
     targetDensity = target;
@@ -11,6 +35,7 @@ void EPlacer_2D::setPlacementStage(int stage)
     placementStage = stage;
 }
 
+//! 一次性初始化：filler 插入 → bin 网格构建 → 梯度容器分配 → 首轮梯度 → λ 初值
 void EPlacer_2D::initialization()
 {
     double binInitTime;
@@ -21,9 +46,18 @@ void EPlacer_2D::initialization()
     cout << "Bin init time: " << binInitTime << endl;
     gradientVectorInitialization();
     totalGradientUpdate(); // first update
-    penaltyFactorInitilization();
+    penaltyFactorInitilization(); //! 注意：λ 的初始化依赖上面这次梯度，所以顺序不能颠倒
 }
 
+// ----------------------------------------------------------------------------
+// filler（虚拟填充单元）插入
+//
+// filler 不连任何线网，只贡献面积/密度，作用是「占住空白区域」，
+// 让密度力把真实单元往空白处推。总面积按 ePlace 论文公式(13)：
+//     A_filler = A_whitespace · targetDensity − A_m
+// 其中 A_whitespace = 布局行面积 − 与 terminal 的重叠面积，A_m 为单元面积（macro 按密度折算）。
+// 单个 filler 尺寸取「中间 80% 单元的平均面积」，避免个别超大/超小单元拉偏。
+// ----------------------------------------------------------------------------
 void EPlacer_2D::fillerInitialization()
 {
     segmentFaultCP("fillerInit");
@@ -35,6 +69,7 @@ void EPlacer_2D::fillerInitialization()
     float whitespaceArea = 0;
     float totalOverLapArea = 0; // overlap area between placement rows and terminals
 
+    //! 跳过 NI terminal（RePlAce 中的 "NI" / do-not-place 类型，如 IO filler、tapless 等占位）
     for (Module *curTerminal : db->dbTerminals)
     {
         if (curTerminal->isNI) //!
@@ -80,6 +115,8 @@ void EPlacer_2D::fillerInitialization()
     ePlaceStdCellArea = stdcellArea;
     ePlaceMacroArea = macroArea;
 
+    //! Am：式(13) 里的单元面积项。macro 面积乘 targetDensity 做折算，
+    //! 因为 macro 通常不允许被塞满到 targetDensity，等效占用面积更小
     nodeAreaScaled = stdcellArea + macroArea * targetDensity; // see ePlace paper equation (13), Am is nodeArea here. or see RePlAce code opt.cpp line 86, total_modu_area equals nodeAreaScaled here
     //??? macro area should *= target density when calculating Am in(13)? see RePlAce code opt.cpp line 86 But terminal area wasn't *= target density when calculating Aws??? implement as this for now
 
@@ -104,6 +141,8 @@ void EPlacer_2D::fillerInitialization()
 
     sort(nodeArea.begin(), nodeArea.end()); //! sort by area
 
+    //! 取中间 80%（去掉最小 5% 和最大 5%）的平均面积作为单个 filler 的面积，
+    //! 目的是避开极端值，让 filler 尺寸贴近「典型单元」大小
     float avg80TotalArea = 0;
     float avg80NodeArea = 0;
     int minIdx = (int)(0.05 * (float)nodeCount); //! for calculating average area of the middle 80% of all nodes(cells and macros)
@@ -116,6 +155,7 @@ void EPlacer_2D::fillerInitialization()
 
     avg80NodeArea = avg80TotalArea / ((float)(maxIdx - minIdx));
 
+    //! filler 高度取行高，宽度由面积反推，保证 filler 和标准单元「同高」，能自然填满布局行
     float fillerArea = avg80NodeArea; //! use average area of the middle 90% of all nodes as filler area! see ePlace paper, filler insertion
     float fillerHeight = db->commonRowHeight;
     float fillerWidth = float_div(fillerArea, fillerHeight);
@@ -131,6 +171,7 @@ void EPlacer_2D::fillerInitialization()
     float leftMost;
     float rightMost;
 
+    //! filler 的 idx 从 nodeCount 开始往后排，保证 ePlaceNodesAndFillers 里 idx 连续
     for (int i = 0; i < fillerCount; i++)
     {
         string name = "f" + to_string(i);
@@ -138,9 +179,14 @@ void EPlacer_2D::fillerInitialization()
         curFiller->isFiller = true; //!
         ePlaceFillers[i] = curFiller;
 
-        db->setModuleLocation_2D_random(curFiller);
+        db->setModuleLocation_2D_random(curFiller); //! 初始位置在 core 区域内随机撒点
     }
 
+    //! 三个「参与优化的单元集合」，对应三个放置阶段：
+    //!   ePlaceNodesAndFillers = 所有可动单元(含 macro) + filler  → mGP
+    //!   ePlaceFillers         = 仅 filler                        → FILLERONLY
+    //!   ePlaceCellsAndFillers = std cell + filler（不含 macro）   → cGP
+    //! 这些 vector 里元素的先后顺序必须与各 gradient vector 的下标严格对应
     ePlaceNodesAndFillers = db->dbNodes;
     ePlaceNodesAndFillers.insert(ePlaceNodesAndFillers.end(), ePlaceFillers.begin(), ePlaceFillers.end()); //! fillers are stored after nodes in the vector
 
@@ -161,6 +207,17 @@ void EPlacer_2D::fillerInitialization()
     // density scaling when calculating Aws?
 }
 
+// ----------------------------------------------------------------------------
+// bin 网格初始化（划分整个 coreRegion）
+//
+// 1. 先确定 bin 数量：理想 bin 面积 = 平均单元面积 / targetDensity，
+//    使「一个 bin 大致装一个单元」，再向上取到最近的 2 的幂（4×4 … 1024×1024），
+//    这样 FFT 可以直接用基-2 算法，效率最高。
+// 2. 逐个 bin 计算 ll/ur/center/area（坐标要加上 coreRegion.ll 偏移）。
+// 3. terminalDensity：terminal 固定不动，重叠面积只算一次。
+// 4. baseDensity：bin 内「不在任何布局行上」的不可放置区域（对应 RePlAce 的 virt_area），
+//    同样固定不变，只算一次。
+// ----------------------------------------------------------------------------
 void EPlacer_2D::binInitialization()
 {
     segmentFaultCP("binInit");
@@ -186,6 +243,8 @@ void EPlacer_2D::binInitialization()
     // bin dimension upper bound: 1024 rather than 2048
     // for (int i = 1; i <= 10; i++)
     // { //! 4*4,8*8,16*16,32*32..., 2048*2048
+    //! 在 4×4, 8×8, …, 1024×1024 里挑第一个「不超过 idealBinCount 的最大档」。
+    //! 注意 2 << i 即 2^(i+1)：i=1 → 4，i=9 → 1024（故上限写成 i<10）
     for (int i = 1; i < 10; i++)
     { //! 4*4,8*8,16*16,32*32..., 1024*1024
         if ((2 << i) * (2 << i) <= idealBinCount &&
@@ -278,6 +337,8 @@ void EPlacer_2D::binInitialization()
             continue;
         }
 
+        //! 把 terminal 的包围盒映射到 bin 下标区间 [binStartIdx, binEndIdx]，
+        //! 之后只在这段区间内累加重叠面积（INT_DOWN 即向下取整）
         binStartIdx.x = INT_DOWN((curTerminal->getLL_2D().x - db->coreRegion.ll.x) / binStep.x);
         binEndIdx.x = INT_DOWN((curTerminal->getUR_2D().x - db->coreRegion.ll.x) / binStep.x);
 
@@ -305,6 +366,7 @@ void EPlacer_2D::binInitialization()
         {
             for (int j = binStartIdx.y; j <= binEndIdx.y; j++)
             {
+                //! terminal 也按 targetDensity 折算，和 nodeDensity 的口径保持一致
                 //! beware: density scaling!
                 bins[i][j]->terminalDensity += targetDensity * getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, curTerminal->getLL_2D(), curTerminal->getUR_2D());
             }
@@ -324,6 +386,10 @@ void EPlacer_2D::binInitialization()
     {
         for (int j = 0; j < binDimension.y; j++)
         {
+            //! bin 与所有布局行的重叠面积 = 该 bin 里「可放置」的面积；
+            //! 差额 (bin面积 − 可放置面积) 就是不可放置区域，乘 targetDensity 记入 baseDensity。
+            //! 完全落在布局行内的 bin 其 baseDensity 为 0。
+            //! 注意这里是 O(binCount × rowCount) 的双层循环，bin 数多时是初始化热点。
             float curBinAvailableArea = 0; // overlap area between current bin and placement rows
             for (SiteRow curRow : db->dbSiteRows)
             {
@@ -345,6 +411,10 @@ void EPlacer_2D::binInitialization()
     cout << "Base density time: " << baseDensityTime << endl;
 }
 
+//! 分配各梯度容器。注意容量差异：
+//!   wirelengthGradient 只有 dbNodes 个（filler 不连线，线长梯度恒为 0，不占空间）
+//!   densityGradient / totalGradient 是 nodes + fillers 个
+//!   cGPGradient 是 std cell + fillers 个，fillerGradient 只有 fillers 个
 void EPlacer_2D::gradientVectorInitialization()
 {
     wirelengthGradient.resize(db->dbNodes.size()); // fillers has no wirelength gradient
@@ -355,6 +425,16 @@ void EPlacer_2D::gradientVectorInitialization()
     fillerGradient.resize(ePlaceFillers.size());
 }
 
+// ----------------------------------------------------------------------------
+// 更新全局溢出率 τ（globalDensityOverflow）
+//
+//   τ = Σ_bin max(0, ρ_bin − targetDensity) · binArea  /  Am
+// 其中 ρ_bin = (nodeDensity + terminalDensity + baseDensity) / binArea。
+//
+// 注意：这里**故意不含 fillerDensity**——filler 是用来填白的，若计入会把 τ 人为抬高，
+// 使算法误判为「还很拥塞」。τ 是 Nesterov 优化的收敛判据（见 nesterov.hpp stop_condition），
+// 也是下面 γ 计算的输入。
+// ----------------------------------------------------------------------------
 void EPlacer_2D::densityOverflowUpdate()
 {
     segmentFaultCP("densityOverflow");
@@ -372,6 +452,17 @@ void EPlacer_2D::densityOverflowUpdate()
     globalDensityOverflow = globalOverflowArea / nodeAreaScaled; // see RePlAce code bin.cpp line 1183, opt.cpp line 86. And nodeAreaScaled in fillerInitialization() in this file
 }
 
+// ----------------------------------------------------------------------------
+// 线长梯度更新
+//
+// Step1 先算平滑系数 γ（这里实际存的是 1/γ，跟随 RePlAce 的习惯）：
+//   1/γ = (1 / (8·wb)) · 10^(−(k·τ + b))，k = 20/9，b = −11/9  （ePlace 论文式38）
+//   τ 大（还很拥塞）→ γ 小 → 线长模型更接近线性、平滑更强，先顾着铺开；
+//   τ 小（快收敛）  → γ 大 → 线长模型更接近真实 HPWL，开始精细优化。
+//   代码里对 τ>1 和 τ<0.1 两个极端做了截断，避免指数项数值溢出/过小。
+// Step2 用平滑线长模型（默认 WA，加 -LSE 参数则切到 LSE）逐 pin 求梯度并累加到单元上。
+//   两种模型都依赖每个 net 的 X/Y 边界 pin，所以每一步都要先调 calcNetBoundPins() 刷新。
+// ----------------------------------------------------------------------------
 void EPlacer_2D::wirelengthGradientUpdate()
 {
     ////////////////////////////////////////////////////////////////
@@ -414,8 +505,10 @@ void EPlacer_2D::wirelengthGradientUpdate()
     // When using weighted-average wirelength model we would need X/Y/Z max and min in a net,
     // so update X/Y/Z max and min in all nets first, see ntuplace3D paper page 6: Stable Weighted-Average Wirelength Model
     // Also the numerators and denominators are pre-calculated for all nets for further use
+    //! 先刷新 τ，因为 γ 是 τ 的函数；同时 calcNetBoundPins 会顺带更新每个 net 的边界 pin
     double HPWL = db->calcNetBoundPins();
 
+    //! HPWL 在这里只是算出来备用（LSE 分支下未使用），真正用的是下面的梯度
     if (gArg.CheckExist("LSE"))
     {
         double LSE = db->calcLSE_Wirelength_2D(invertedGamma);
@@ -456,6 +549,18 @@ void EPlacer_2D::wirelengthGradientUpdate()
     }
 }
 
+// ----------------------------------------------------------------------------
+// 密度梯度更新（ePlace 的精髓：静电场）
+//
+// Step1 求电场：把每个 bin 的电荷密度 ρ = (node + base + filler + terminal) / binArea
+//   送进 FFT，解泊松方程 ∇²φ = −ρ，得到每个 bin 的电势 φ 和电场 E = −∇φ。
+//   （这里**包含** fillerDensity——filler 必须参与产生斥力，否则填白无从谈起。）
+//   全局的 FFT 让这一步复杂度是 O(N log N) 而非 O(N²)。
+// Step2 求梯度：对每个单元，把它覆盖到的 bin 上的 E 按「与 bin 的重叠面积」加权求和，
+//   即 ∂D/∂x = Σ_bins overlapArea · E_bin。
+//   local smooth：比 bin 还小的单元会被「撑大」到一整个 bin 宽再算重叠，
+//   同时按 (实际尺寸 / bin尺寸) 缩放面积，避免小单元只在单个 bin 上产生脉冲式梯度。
+// ----------------------------------------------------------------------------
 void EPlacer_2D::densityGradientUpdate()
 {
     ////////////////////////////////////////////////////////////////
@@ -513,6 +618,8 @@ void EPlacer_2D::densityGradientUpdate()
 
         // if (!curNode->isMacro)
         // {
+        //! 单元比 bin 小 → 把它在 X 方向撑到一整个 bin 宽，并记录缩放系数，
+        //! 这样重叠面积算的是「撑大后」的，再乘 scale 还原成等效面积
         //! local smooth: not only for std cells because there may be small macros, like in MMS bigblue3
         if (float_less(curNode->getWidth(), binStep.x))
         {
@@ -567,6 +674,16 @@ void EPlacer_2D::densityGradientUpdate()
     }
 }
 
+// ----------------------------------------------------------------------------
+// 合成总梯度 —— 优化器每次迭代实际取用的就是这里的结果
+//
+//   可动单元：∇f = λ·∇D − ∇WL      （注意 ∇WL 取负号：要最小化线长，即往线长下降方向走）
+//   filler  ：∇f = λ·∇D            （不连线，无线长项）
+//
+// 再乘一个 preconditioner = 1 / max(1, pin数 + λ·面积)，
+// 让「连线多 / 面积大」的单元步长小一些，改善一阶优化的收敛性。
+// 同时按阶段把结果分别填进 fillerGradient / cGPGradient，供 getGradient() 直接返回。
+// ----------------------------------------------------------------------------
 void EPlacer_2D::totalGradientUpdate()
 {
 
@@ -581,7 +698,7 @@ void EPlacer_2D::totalGradientUpdate()
     for (Module *curNodeOrFiller : ePlaceNodesAndFillers) // branch in this for can be eliminated
     {
         totalGradient[index].SetZero();
-        assert(index == curNodeOrFiller->idx);
+        assert(index == curNodeOrFiller->idx); //! 下标必须和 module->idx 对齐，否则梯度会张冠李戴
 
         //! precondition
         float connectedNetNum = curNodeOrFiller->modulePins.size();
@@ -595,6 +712,7 @@ void EPlacer_2D::totalGradientUpdate()
         if (curNodeOrFiller->isFiller)
         {
             // wirelength gradient of fillers should == 0
+            //! filler 同时进 fillerGradient（FILLERONLY 阶段）和 cGPGradient（cGP 阶段）
             totalGradient[index].x = preconditioner * lambda * densityGradient[index].x;
             totalGradient[index].y = preconditioner * lambda * densityGradient[index].y;
 
@@ -619,6 +737,8 @@ void EPlacer_2D::totalGradientUpdate()
     }
 }
 
+//! 按当前阶段返回优化器需要的梯度向量（三者的长度和顺序各不相同，见 gradientVectorInitialization）
+//! ! 注意：placementStage 既不是这三个值时会走到函数末尾而没有 return，属未定义行为
 vector<VECTOR_3D> EPlacer_2D::getGradient()
 {
     if (placementStage == mGP)
@@ -635,6 +755,7 @@ vector<VECTOR_3D> EPlacer_2D::getGradient()
     }
 }
 
+//! 返回参与当前阶段优化的单元的中心坐标，顺序与 getGradient() 一一对应
 vector<VECTOR_3D> EPlacer_2D::getPosition()
 {
     if (placementStage == mGP)
@@ -651,6 +772,8 @@ vector<VECTOR_3D> EPlacer_2D::getPosition()
     }
 }
 
+//! 把优化器算出的新坐标写回数据库。setModuleCenter_2D 只改中心、不改尺寸，
+//! 并会同步刷新该单元上所有 pin 的绝对坐标，供下一轮线长梯度使用
 void EPlacer_2D::setPosition(vector<VECTOR_3D> modulePositions)
 {
     int moduleCount;
@@ -680,6 +803,12 @@ void EPlacer_2D::setPosition(vector<VECTOR_3D> modulePositions)
     }
 }
 
+// ----------------------------------------------------------------------------
+// λ 初始化（ePlace 论文式 35）
+//   λ₀ = Σ|∇WL| / Σ|∇D|
+// 即让线长项和密度项的梯度量级相当，两项在优化中权重均衡。
+// 分子只累加真实单元的线长梯度，分母要额外加上 filler 的密度梯度（下标 nodeCount 之后）。
+// ----------------------------------------------------------------------------
 void EPlacer_2D::penaltyFactorInitilization()
 {
     lastHPWL = db->calcHPWL();
@@ -696,7 +825,7 @@ void EPlacer_2D::penaltyFactorInitilization()
         denominator += fabs(densityGradient[i].x);
         denominator += fabs(densityGradient[i].y);
     }
-    for (int i = nodeCount; i < nodeAndFillerCount; i++)
+    for (int i = nodeCount; i < nodeAndFillerCount; i++) //! filler 只有密度梯度，补到分母
     {
         denominator += fabs(densityGradient[i].x);
         denominator += fabs(densityGradient[i].y);
@@ -705,6 +834,15 @@ void EPlacer_2D::penaltyFactorInitilization()
     lambda = float_div(numerator, denominator);
 }
 
+// ----------------------------------------------------------------------------
+// λ 自适应更新（ePlace 论文式 36）
+//    multiplier = base^( −ΔHPWL / DELTA_HPWL_REF + 1 ) ，再夹到 [0.95, 1.05]
+//    λ ← λ · multiplier
+// 直观含义：
+//    ΔHPWL > 0（线长变差，说明密度力推得太猛）→ 指数 < 1 → λ 缩小，放松密度约束；
+//    ΔHPWL < 0（线长变好）                    → 直接用上界 1.05 → λ 增大，继续铺开。
+// 这是让「铺开」和「缩短线长」两个目标逐步达到平衡的关键机制。
+// ----------------------------------------------------------------------------
 void EPlacer_2D::updatePenaltyFactor()
 {
     // printf("penalty factor = %.10f\n", lambda);
@@ -713,6 +851,7 @@ void EPlacer_2D::updatePenaltyFactor()
     double deltaHPWL = curHPWL - lastHPWL;
     if ((deltaHPWL) < 0.0) //?? what if (curHPWL - lastHPWL)<0????? never considered before 2024.5.19
     {
+        //! 线长改善了 → 直接取上界放大 λ，加大密度力继续铺开
         // cout << "multiplier is: " << pow(PENALTY_MULTIPLIER_BASE, (-(deltaHPWL) / DELTA_HPWL_REF + 1.0)) << " when < 0" << endl;
         multiplier = PENALTY_MULTIPLIER_UPPERBOUND;
     }
@@ -730,6 +869,8 @@ void EPlacer_2D::updatePenaltyFactor()
         multiplier = PENALTY_MULTIPLIER_LOWERBOUND;
     }
     lambda *= multiplier;
+    //! 下面这段是曾经尝试过的 λ 硬上下限裁剪，现已注释掉——
+    //! 目前完全靠 multiplier 的 [0.95, 1.05] 夹取来约束 λ 的变化幅度
     // if (penaltyFactor < 0.00001)
     // {
     //     penaltyFactor = 0.00001;
@@ -741,6 +882,8 @@ void EPlacer_2D::updatePenaltyFactor()
     lastHPWL = curHPWL;
 }
 
+//! mGP → FILLERONLY：把所有 filler 重新随机撒一遍，
+//! 目的是打破 mGP 收敛后残留的局部拥塞，给后续 cGP 一个更好的初始分布
 void EPlacer_2D::switch2FillerOnly()
 {
     for (Module *curFiller : ePlaceFillers)
@@ -750,22 +893,29 @@ void EPlacer_2D::switch2FillerOnly()
     placementStage = FILLERONLY;
 }
 
+//! mGP → cGP：macro 冻结，只剩 std cell + filler 继续优化
 void EPlacer_2D::switch2cGP()
 {
-    //! 1. update lambda
+    //! 1. update lambda：mGP 跑得越久 λ 被抬得越高，这里按 1.1^(迭代数×0.1) 回调，
+    //!    因为 cGP 阶段只剩单元，需要的密度力比 mGP 小
     lambda = lambda / pow(1.1, mGPIterationCount * 0.1);
     //! 2. update placement stage
     placementStage = cGP;
 }
 
+//! 打印当前迭代的关键指标（溢出率 τ、惩罚因子 λ、线长）
 void EPlacer_2D::showInfo()
 {
     cout << "Overflow: " << globalDensityOverflow << endl;
     cout << "penalty factor: " << fixed << lambda << endl;
+    //! 注意打印的是 lastHPWL，即上一次 updatePenaltyFactor 时记录的线长，不是实时值
     cout << "HPWL: " << lastHPWL << endl
          << endl;
 }
 
+// 下面是一整段被注释掉的 plotCurrentPlacement：用 CImg 把当前布局画成 bmp（terminal 蓝、
+// macro 橙、std cell 红、filler 绿）。绘图功能已迁到 Plot/plot.cpp（PLOTTING::plotCurrentPlacement），
+// 这里保留作历史备份。
 // void EPlacer_2D::plotCurrentPlacement(string imageName)
 // {
 //     string plotPath;
@@ -851,6 +1001,7 @@ void EPlacer_2D::showInfo()
 //     cout << "INFO: BMP HAS BEEN SAVED: " << imageName + string(".bmp") << endl;
 // }
 
+//! 取出一组 module 的中心坐标（z 分量保留，实际 2D 布局里恒为 0）
 vector<VECTOR_3D> EPlacer_2D::getModulePositions(vector<Module *> modules)
 {
     int moduleCount = modules.size();
@@ -864,6 +1015,17 @@ vector<VECTOR_3D> EPlacer_2D::getModulePositions(vector<Module *> modules)
     return res;
 }
 
+// ----------------------------------------------------------------------------
+// 把每个单元/filler 的面积摊进 bin（每次迭代都要重算，因为位置变了）
+//
+// 两个关键修正：
+//   · local smooth：单元比 bin 还小时，把它撑大到一整个 bin 再算重叠，
+//     否则小单元只在单个 bin 上留下尖峰，密度场和电场都会抖动。
+//   · macro density scaling：macro 的面积乘 targetDensity 折算，
+//     与 fillerInitialization 里 nodeAreaScaled 的口径保持一致。
+// filler 的面积单独记进 fillerDensity，不混进 nodeDensity
+//   （这样 densityOverflowUpdate 才能不计 filler 来算 τ）。
+// ----------------------------------------------------------------------------
 void EPlacer_2D::binNodeDensityUpdate()
 {
     //!!!! clear nodeDensity for each bin before update!
@@ -881,6 +1043,7 @@ void EPlacer_2D::binNodeDensityUpdate()
     {
         bool localSmooth = false;         //! local smooth is applied only to std cells, is this right?
         bool macroDensityScaling = false; // density scaling, see ePlace paper
+        //! 注：这两个 flag 下面只被赋值、从未被读取，实际判断走的是 isMacro / 尺寸比较，属于遗留的死变量
 
         VECTOR_2D localSmoothLengthScale; // see ePlace paper page 15 or RePlace opt.cpp line 1460
         localSmoothLengthScale.x = 1;
@@ -946,6 +1109,7 @@ void EPlacer_2D::binNodeDensityUpdate()
             for (int j = binStartIdx.y; j <= binEndIdx.y; j++)
             {
 
+                //! 三种口径分开累加：macro 折算 → nodeDensity；filler → fillerDensity；普通单元 → nodeDensity
                 float overlapArea = getOverlapArea_2D(bins[i][j]->ll, bins[i][j]->ur, rectForCurNode.ll, rectForCurNode.ur);
                 if (curNode->isMacro)
                 {

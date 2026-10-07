@@ -1,3 +1,13 @@
+// ============================================================================
+// fftsg3d.cpp —— 第三方 vendored 代码，请勿修改、不做逐行注释
+//   来源：Takuya Ooura 的通用 FFT 程序包（fftsg3d.c，3D 部分），
+//   由 RePlAce / ePlace-MS 原样引入，提供 cdft3d / rdft3d / ddct3d / ddst3d 等 3D 变换。
+//   本文件当前**未参与构建**：EPlace/CMakeLists.txt 只编译 fft.cpp / fftsg2d.cpp / fftsg.cpp。
+//! 疑似问题：文件内使用的 prec 类型在本仓库中并没有定义（global.h 里也没有该 typedef），
+//!   因此它现在无法通过编译（clang++ 报 20 个 unknown type name 'prec' 错误，属改动前既有问题）。
+//   本项目 2D 布局只用到 FFT/fftsg2d.cpp，3D 接口属历史遗留。
+// ============================================================================
+
 ///////////////////////////////////////////////////////////////////////////////
 // Authors: Ilgweon Kang and Lutong Wang
 //          (respective Ph.D. advisors: Chung-Kuan Cheng, Andrew B. Kahng),

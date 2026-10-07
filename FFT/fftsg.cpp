@@ -1,3 +1,12 @@
+// ============================================================================
+// fftsg.cpp —— 第三方 vendored 代码，请勿修改、不做逐行注释
+//   来源：Takuya Ooura 的通用 FFT 程序包（fftsg.c，1D 部分），
+//   经 RePlAce / ePlace 项目改为 C++、float 精度并纳入 replace 命名空间后原样引入。
+//   提供 cdft / rdft / ddct / ddst 等 1D 变换及其三角函数表、位反转、蝶形核，
+//   被 FFT/fftsg2d.cpp 的 2D 封装按行列分离法调用。
+//   想了解算法细节请查阅 Ooura 原始文档；本文件内的调用语义见 FFT/fft.h 与 FFT/fft.cpp。
+// ============================================================================
+
 #include <cmath>
 #include <iostream>
 #include "fft.h"

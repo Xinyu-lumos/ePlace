@@ -1,3 +1,5 @@
+// qplace 的独立调试入口：只读入 bookshelf 设计、跑一遍二次布局、画图看结果。
+// 命令行：qplace_test -aux <path>/<benchmark>.aux [-IPiteCount N] [-fullPlot]
 #include "parser.h"
 #include "arghandler.h"
 #include "qplace.h"
@@ -8,7 +10,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     PlaceDB *placedb = new PlaceDB();
-    gArg.Init(argc, argv);
+    gArg.Init(argc, argv); //! 把命令行参数解析进全局 gArg，后续 QPPlacer 里的 IPiteCount / debug / fullPlot 都从这里读
 
     if (argc < 2)
     {
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
         BookshelfParser parser;
         parser.ReadFile(argv[2], *placedb);
     }
-    placedb->showDBInfo();
+    placedb->showDBInfo(); //! 打印单元/线网/terminal 数量、core 区域等基本信息
     QPPlacer *qpplacer = new QPPlacer(placedb);
-    qpplacer->quadraticPlacement();
+    qpplacer->quadraticPlacement(); //! 跑二次布局；加 -fullPlot 可逐轮输出布局图
 }
